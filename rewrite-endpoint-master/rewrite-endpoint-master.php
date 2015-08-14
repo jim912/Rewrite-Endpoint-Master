@@ -35,11 +35,13 @@ class Rewrite_Endpoint_Master {
 		add_action( 'init'                  , array( $this, 'register_post_type' ), 1 );
 		add_action( 'init'                  , array( $this, 'add_endpoints' ), 1 );
 		add_action( 'wp_insert_post'        , array( $this, 'update_ep_meta' ) );
-		// TODO do flush_rewrite_rules after update endpoint-master post
-//		add_action( 'transition_post_status', array( $this, 'flush_rewrite_rules' ), 10, 3 );
 		// TODO Custom post_submit_meta_box lile Contact Form 7
 		if ( is_admin() ) {
 			add_action( 'add_meta_boxes', array( $this, 'add_ep_meta_box' ), 10, 2 );
+			if ( isset( $_GET['post_type'] ) && 'endpoint-master' == $_GET['post_type'] ) {
+				add_action( 'load-edit.php', array( $this, 'flush_rewrite_rules' ) );
+			}
+			add_action( 'load-post.php', array( $this, 'check_flush_rewrite_rules' ) );
 		}
 		// TODO i18n
 		// TODO register_deactivation_hook
@@ -77,10 +79,13 @@ class Rewrite_Endpoint_Master {
 		if ( $this->endpoints ) {
 			foreach ( $this->endpoints as $endpoint ) {
 				if ( $endpoint->_ep_name && $endpoint->_ep_type ) {
+					$type = 0;
 					$query_var = $endpoint->_ep_query ? trim( $endpoint->_ep_query ) : null;
-					$type = array_sum( $endpoint->_ep_type );
+					foreach ( $endpoint->_ep_type as $ep_mask ) {
+						$type = $type | $ep_mask;
+					}
 					if ( in_array( '0', $endpoint->_ep_type ) && $endpoint->_ep_custom ) {
-						$type += $endpoint->_ep_custom;
+						$type = $type | $endpoint->_ep_custom;
 					}
 					$this->endpoint_vars[$endpoint->_ep_name] = $query_var;
 					add_rewrite_endpoint( $endpoint->_ep_name, $type, $query_var );
@@ -165,9 +170,19 @@ class Rewrite_Endpoint_Master {
 	}
 	
 	
-	public function flush_rewrite_rules( $new_status, $old_status, $post ) {
+	public function check_flush_rewrite_rules() {
+		if ( isset( $_GET['post'] ) && is_numeric( $_GET['post'] ) ) {
+			$post = get_post( $_GET['post'] );
+			if ( $post && 'endpoint-master' == $post->post_type ) {
+				$this->flush_rewrite_rules();
+			}
+		}
+	}
+	
+	
+	public function flush_rewrite_rules() {
 		global $wp_rewrite;
-		if ( $wp_rewrite->using_permalinks() && 'endpoint-master' == $post->post_type && in_array( 'publish', array( $new_status, $old_status ) ) ) {
+		if ( $wp_rewrite->using_permalinks() ) {
 			flush_rewrite_rules( false );
 		}
 	}
