@@ -1,9 +1,9 @@
 === Rewrite Endpoint Master ===
-Contributors: jim912, 
+Contributors: jim912, minkapi
 Tags: permalink, rewrite, endpoint
-Requires at least: 4.2
-Tested up to: 4,2
-Stable tag: 1.0
+Requires at least: 4.3
+Tested up to: 4.3
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 

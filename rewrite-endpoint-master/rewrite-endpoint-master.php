@@ -3,8 +3,8 @@
 Plugin Name: Rewrite Endpoint Master
 Plugin URI: https://github.com/jim912/Rewrite-Endpoint-Master
 Description: This plugin manage custom rewrite endpoints from admin panel.
-Author: jim912
-Version: 0.1
+Author: jim912, minkapi
+Version: 0.1.1
 Author URI: http://www.warna.info/
 */
 class Rewrite_Endpoint_Master {
@@ -30,11 +30,13 @@ class Rewrite_Endpoint_Master {
 	
 	public $endpoint_vars = array();
 	private $endpoints = array();
+	private $canonical_vars = array();
 	
 	public function __construct() {
 		add_action( 'init'                  , array( $this, 'register_post_type' ), 1 );
 		add_action( 'init'                  , array( $this, 'add_endpoints' ), 1 );
 		add_action( 'wp_insert_post'        , array( $this, 'update_ep_meta' ) );
+		add_action( 'template_redirect'     , array( $this, 'replace_rel_canonical' ) );
 		// TODO Custom post_submit_meta_box lile Contact Form 7
 		if ( is_admin() ) {
 			add_action( 'add_meta_boxes', array( $this, 'add_ep_meta_box' ), 10, 2 );
@@ -186,7 +188,99 @@ class Rewrite_Endpoint_Master {
 			flush_rewrite_rules( false );
 		}
 	}
+
+
+	public function replace_rel_canonical() {
+		global $post, $wp_the_query, $wp_rewrite, $wp_query;
+		if ( ! is_singular() ) { return; }
+		if ( ! $id = $wp_the_query->get_queried_object_id() ) { return; }
+		if ( ! $this->endpoints || ! $wp_rewrite->using_permalinks() ) { return; }
+
+		$mask = $this->get_post_type_mask( $post->post_type );
+		foreach ( $this->endpoints as $endpoint ) {
+			if ( $endpoint->_ep_name && $endpoint->_ep_type ) {
+				$type = 0;
+				$query_var = $endpoint->_ep_query ? trim( $endpoint->_ep_query ) : $endpoint->_ep_name;
+				foreach ( $endpoint->_ep_type as $ep_mask ) {
+					$type = $type | $ep_mask;
+				}
+				if ( in_array( '0', $endpoint->_ep_type ) && $endpoint->_ep_custom ) {
+					$type = $type | $endpoint->_ep_custom;
+				}
+				if ( $type & $mask ) {
+					if ( isset( $wp_query->query_vars[$query_var] ) ) {
+						remove_action( 'wp_head', 'rel_canonical' );
+						$query_value = $wp_query->query_vars[$query_var];
+						$this->canonical_vars = array( $id, $endpoint->_ep_name, $query_value );
+						add_action( 'wp_head', array( $this, 'rel_canonical' ) );
+						break;
+					}
+				}
+			}
+		}
+	}
 	
+	
+	public function rel_canonical() {
+		$canonical_url = untrailingslashit( get_permalink( $this->canonical_vars[0] ) ) . '/' . $this->canonical_vars[1];
+		if ( $this->canonical_vars[2] ) {
+			$canonical_url .= '/' . $this->canonical_vars[2];
+		}
+		$canonical_url = user_trailingslashit( $canonical_url );
+		echo '<link rel="canonical" href="' . esc_url( $canonical_url ) . '" />' . "\n";
+	}
+	
+	
+	private function get_post_type_mask( $post_type ) {
+		if ( ! post_type_exists( $post_type ) ) { return false; }
+		switch ( $post_type ) {
+		case 'post' :
+			$mask = EP_PERMALINK;
+			break;
+		case 'page' :
+			$mask = EP_PAGES;
+			break;
+		case 'attachment' :
+			$mask = EP_ATTACHMENT;
+			break;
+		default :
+			$post_type = get_post_type_object( $post->post_type );
+			if ( isset( $post_type->rewrite['ep_mask'] ) ) {
+				$mask = $post_type->rewrite['ep_mask'];
+			} else{
+				$mask = EP_PERMALINK;
+			}
+		}
+		return $mask;
+	}
+	
+	public function get_ep_permalink( $post = null, $ep_name, $ep_value = null ) {
+		$post = get_post( $post );
+		if ( ! $post ) { return false; }
+		$ep_permalink = get_permalink( $post->ID );
+		$mask = $this->get_post_type_mask( $post->post_type );
+		foreach ( $this->endpoints as $endpoint ) {
+			if ( $endpoint->_ep_name && $endpoint->_ep_type && $ep_name == $endpoint->_ep_name ) {
+				$type = 0;
+				$query_var = $endpoint->_ep_query ? trim( $endpoint->_ep_query ) : $endpoint->_ep_name;
+				foreach ( $endpoint->_ep_type as $ep_mask ) {
+					$type = $type | $ep_mask;
+				}
+				if ( in_array( '0', $endpoint->_ep_type ) && $endpoint->_ep_custom ) {
+					$type = $type | $endpoint->_ep_custom;
+				}
+				if ( $mask & $type ) {
+					$ep_permalink = untrailingslashit( $ep_permalink ) . '/' . $ep_name;
+					if ( $ep_value ) {
+						$ep_permalink .= '/' . $ep_value;
+					}
+					$ep_permalink = user_trailingslashit( $ep_permalink );
+					return $ep_permalink;
+				}
+			}
+		}
+		return $ep_permalink;
+	}
 	
 	static function uninstall_plugin() {
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) { return; }
@@ -208,10 +302,11 @@ $Rewrite_Endpoint_Master = new Rewrite_Endpoint_Master;
 
 function is_endpoint_page( $ep_name ) {
 	global $Rewrite_Endpoint_Master, $wp_query;
-	return isset( $Rewrite_Endpoint_Master->endpoint_vars[$ep_name] ) && isset( $wp_query->query[$Rewrite_Endpoint_Master->endpoint_vars[$ep_name]] );
+	return isset( $Rewrite_Endpoint_Master->endpoint_vars[$ep_name] ) && isset( $wp_query->query_vars[$Rewrite_Endpoint_Master->endpoint_vars[$ep_name]] );
 }
 
 
-function get_ep_permalink( $post, $param = null ) {
-
+function get_ep_permalink( $post = null, $ep_name, $ep_value = null ) {
+	global $Rewrite_Endpoint_Master;
+	return $Rewrite_Endpoint_Master->get_ep_permalink( $post, $ep_name, $ep_value );
 }
