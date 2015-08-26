@@ -4,7 +4,7 @@ Plugin Name: Rewrite Endpoint Master
 Plugin URI: https://github.com/jim912/Rewrite-Endpoint-Master
 Description: This plugin manage custom rewrite endpoints from admin panel.
 Author: jim912, minkapi
-Version: 0.1.1
+Version: 0.1.2
 Author URI: http://www.warna.info/
 */
 class Rewrite_Endpoint_Master {
@@ -57,8 +57,16 @@ class Rewrite_Endpoint_Master {
 			array(
 				'public'  => false,
 				'label'   => 'Endpoints',
-				// TODO labels
 				'labels'  => array(
+					'name'               => 'Endpoints',
+					'singular_name'      => 'Endpoint',
+					'add_new_item'       => __( 'Add New Endpoint', 'ep-master' ),
+					'edit_item'          => __( 'Edit Endpoint', 'ep-master' ),
+					'new_item'           => __( 'New Endpoint', 'ep-master' ),
+					'view_item'          => __( 'View Endpoint', 'ep-master' ),
+					'search_items'       => __( 'Search Endpoint', 'ep-master' ),
+					'not_found'          => __( 'No endpoints found', 'ep-master' ),
+					'not_found_in_trash' => __( 'No endpoints found in Trash' ),
 				),
 				'show_ui' => true,
 				'show_in_menu' => 'options-general.php',
