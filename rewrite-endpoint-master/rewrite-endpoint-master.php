@@ -4,7 +4,7 @@ Plugin Name: Rewrite Endpoint Master
 Plugin URI: https://github.com/jim912/Rewrite-Endpoint-Master
 Description: This plugin manage custom rewrite endpoints from admin panel.
 Author: jim912, minkapi
-Version: 0.1.2
+Version: 0.1.3
 Author URI: http://www.warna.info/
 */
 class Rewrite_Endpoint_Master {
@@ -46,7 +46,7 @@ class Rewrite_Endpoint_Master {
 			add_action( 'load-post.php', array( $this, 'check_flush_rewrite_rules' ) );
 		}
 		// TODO i18n
-		load_plugin_textdomain( 'ep-master', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' )
+		load_plugin_textdomain( 'ep-master', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 		// TODO register_deactivation_hook
 		register_uninstall_hook( __FILE__, array( 'Rewrite_Endpoint_Master', 'uninstall_plugin' ) );
 	}
