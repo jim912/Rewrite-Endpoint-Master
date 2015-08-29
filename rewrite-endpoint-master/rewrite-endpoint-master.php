@@ -46,6 +46,7 @@ class Rewrite_Endpoint_Master {
 			add_action( 'load-post.php', array( $this, 'check_flush_rewrite_rules' ) );
 		}
 		// TODO i18n
+		load_plugin_textdomain( 'ep-master', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' )
 		// TODO register_deactivation_hook
 		register_uninstall_hook( __FILE__, array( 'Rewrite_Endpoint_Master', 'uninstall_plugin' ) );
 	}
